@@ -1,0 +1,74 @@
+// c++ STL
+#include <cmath>
+// ROOT library
+#include <TVector3.h>
+// self-introduced library
+#include "Tdistance_function.hh"
+
+ClassImp(Tdistance_function)
+
+ClassImp(Tdistance_position_pmt)
+
+ClassImp(Tdistance_position_retro)
+
+ClassImp(Tdistance_fly_retro)
+
+double Tdistance_position_pmt::returnvalue()
+{
+  TVector3 position_pmt = data.Get3Position() - info.Get3Position();
+  double d = std::sqrt(position_pmt*position_pmt);
+  return d;
+}
+
+double Tdistance_position_retro::returnvalue()
+{
+  double positionX = data.Get3Position().X();
+  double positionY = data.Get3Position().Y();
+  double positionZ = data.Get3Position().Z();
+  double pmtX = info.GetPosition(0);
+  double pmtY = info.GetPosition(1);
+  double pmtZ = info.GetPosition(2);
+  double WCradius = info.GetWCradius();
+  double WClength = info.GetWClength();
+  double half_WClength = WClength/2.;
+  double a = (pmtX-positionX)*(pmtX-positionX)+(pmtY-positionY)*(pmtY-positionY);
+  double b = positionX*(positionX-pmtX)+positionY*(positionY-pmtY);
+  double c = positionX*positionX+positionY*positionY-WCradius*WCradius;
+  double t;
+  if(a != 0){
+    t = (b-sqrt(b*b-a*c))/a;
+  }
+  else{
+    t = -c/(2*b);
+  }
+  double z = positionZ + (pmtZ - positionZ)*t;
+  if(-half_WClength < z && half_WClength > z){
+
+}
+  else if(z > half_WClength){
+    t = (half_WClength - positionZ)/(pmtZ-positionZ);
+    z = half_WClength;
+  }
+  else{
+    t = (-half_WClength - positionZ)/(pmtZ-positionZ);
+    z = - half_WClength;
+  }
+  double x = positionX + (pmtX-positionX)*t;
+  double y = positionY + (pmtY-positionY)*t;
+  double d2 = std::sqrt((positionX-x)*(positionX-x)+(positionY-y)*(positionY-y)+(positionZ-z)*(positionZ-z));
+  return d2;
+}
+
+double Tdistance_fly_retro::returnvalue()
+{
+  Tdistance_position_pmt d_position_pmt;
+  d_position_pmt.SetHitInfo(info);
+  d_position_pmt.SetReconstructdata(data);
+  Tdistance_position_retro d_position_retro;
+  d_position_retro.SetHitInfo(info);
+  d_position_retro.SetReconstructdata(data);
+  double d_p_p = d_position_pmt.returnvalue();
+  double d_p_r = d_position_retro.returnvalue();
+  return (d_p_p + 2* d_p_r);
+}
+
